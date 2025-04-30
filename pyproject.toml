@@ -5,9 +5,12 @@ description = "Examples and excercises for the Practical Data Engineering for GI
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "cdsapi>=0.7.5",
     "geopandas>=1.0.1",
     "numpy==2.1.2",
     "rasterio>=1.4.3",
+    "rasterstats>=0.20.0",
+    "requests>=2.32.3",
 ]
 
 [dependency-groups]
