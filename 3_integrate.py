@@ -53,7 +53,7 @@ adm2_gdf = adm2_gdf.merge(adm1_gdf[["shapeID", "geometry"]], how="left", left_on
 # drop unnecessary columns from the joins
 adm2_gdf = adm2_gdf.drop(columns=["index_adm1", "shapeID"])
 
-# calcuate the overlap between all adm2 and adm1 intersections found by the spatial join
+# calculate the overlap between all adm2 and adm1 intersections found by the spatial join
 adm2_gdf["overlap_adm1"] = adm2_gdf.apply(lambda x: x.geometry.intersection(x.geometry_adm1).area / x.geometry.area, axis=1)
 
 # keep only instance of shapeID_adm2 with the largest overlap_adm1
