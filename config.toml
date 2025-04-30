@@ -1,0 +1,55 @@
+
+base_path = "/home/userx/git/data-engineering-for-gies/data"
+
+treatment_path = "treatment/ghana_adm2_treatment.csv"
+
+
+[boundary]
+
+version = "v6"
+gb_data_hash = "9469f09"
+gb_web_hash = "57dcd43"
+
+dl_iso3_list = ["GHA"]
+
+overwrite_existing = false
+
+
+[landcover]
+
+dataset_name = "esa_landcover"
+
+api_key_env_var = "CDS_API_KEY"
+
+overwrite_download = false
+overwrite_processing = false
+
+years = [2015, 2020]
+
+mapping.0   = [0]
+mapping.10  = [10, 11, 12]
+mapping.20  = [20]
+mapping.30  = [30, 40]
+mapping.50  = [50, 60, 61, 62, 70, 71, 72, 80, 81, 82, 90, 100, 160, 170]
+mapping.110 = [110, 130]
+mapping.120 = [120, 121, 122]
+mapping.140 = [140, 150, 151, 152, 153]
+mapping.180 = [180]
+mapping.190 = [190]
+mapping.200 = [200, 201, 202]
+mapping.210 = [210]
+mapping.220 = [220]
+
+category_map.no_data = 0
+category_map.rainfed_cropland = 10
+category_map.irrigated_cropland = 20
+category_map.mosaic_cropland = 30
+category_map.forest = 50
+category_map.grassland = 110
+category_map.shrubland = 120
+category_map.sparse_vegetation = 140
+category_map.wetland = 180
+category_map.urban = 190
+category_map.bare_areas = 200
+category_map.water_bodies = 210
+category_map.snow_ice = 220
