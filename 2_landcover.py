@@ -3,12 +3,13 @@ Download and prepare land cover raster data from ESA
 
 https://cds.climate.copernicus.eu/datasets/satellite-land-cover
 """
+
+import logging
 import os
 import shutil
-import zipfile
 from pathlib import Path
 from typing import List
-import logging
+from zipfile import ZipFile
 
 import cdsapi
 import numpy as np
@@ -16,23 +17,23 @@ import rasterio
 
 from config import get_config
 
-
 config = get_config()
 
-class ESALandcover():
 
+class ESALandcover:
     name = "ESA Landcover"
 
-    def __init__(self,
-                raw_dir: str,
-                process_dir: str,
-                output_dir: str,
-                years: List[int],
-                api_key: str,
-                overwrite_download: bool,
-                overwrite_processing: bool,
-                mapping: dict):
-
+    def __init__(
+        self,
+        raw_dir: str,
+        process_dir: str,
+        output_dir: str,
+        years: List[int],
+        api_key: str,
+        overwrite_download: bool,
+        overwrite_processing: bool,
+        mapping: dict,
+    ):
         self.raw_dir = Path(raw_dir)
         self.process_dir = Path(process_dir)
         self.output_dir = Path(output_dir)
@@ -52,10 +53,10 @@ class ESALandcover():
 
         self.cdsapi_client = cdsapi.Client()
 
-        vector_mapping = {int(vi): int(k) for k, v in mapping.items() for vi in v}
+        vector_mapping = {
+            int(vi): int(k) for k, v in mapping.items() for vi in v
+        }
         self.map_func = np.vectorize(vector_mapping.get)
-
-
 
     def get_logger(self):
         """
@@ -63,10 +64,8 @@ class ESALandcover():
         """
         return logging.getLogger("dataset")
 
-
     def download(self, year: int):
-        """Download the ESA land cover data for a given year
-        """
+        """Download the ESA land cover data for a given year"""
         logger = self.get_logger()
 
         if year in self.v207_years:
@@ -87,19 +86,23 @@ class ESALandcover():
                 "version": [version],
                 "year": [str(year)],
             }
-            self.cdsapi_client.retrieve("satellite-land-cover", dl_meta, dl_path)
+            self.cdsapi_client.retrieve(
+                "satellite-land-cover", dl_meta, dl_path
+            )
 
         zipfile_path = dl_path.as_posix()
 
         logger.info(f"Unzipping {zipfile_path}...")
 
-        with zipfile.ZipFile(zipfile_path) as zf:
+        with ZipFile(zipfile_path) as zf:
             netcdf_namelist = [i for i in zf.namelist() if i.endswith(".nc")]
             if len(netcdf_namelist) != 1:
                 raise Exception(
                     f"Multiple or no ({len(netcdf_namelist)}) net cdf files found in zip for {year}"
                 )
-            output_file_path = self.raw_dir / "uncompressed" / netcdf_namelist[0]
+            output_file_path = (
+                self.raw_dir / "uncompressed" / netcdf_namelist[0]
+            )
             if not os.path.isfile(output_file_path) or self.overwrite_download:
                 zf.extract(netcdf_namelist[0], self.raw_dir / "uncompressed")
                 logger.info(f"Unzip complete: {zipfile_path}...")
@@ -108,13 +111,13 @@ class ESALandcover():
 
         return output_file_path
 
-
-
     def process(self, input_path: Path, output_path: Path):
         logger = self.get_logger()
 
         if self.overwrite_download and not self.overwrite_processing:
-            logger.warning("Overwrite download set but not overwrite processing.")
+            logger.warning(
+                "Overwrite download set but not overwrite processing."
+            )
 
         if output_path.exists() and not self.overwrite_processing:
             logger.info(f"Processed layer exists: {input_path}")
@@ -130,7 +133,9 @@ class ESALandcover():
             logger.info(f"Copying input to tmp {input_path} {tmp_input_path}")
             shutil.copyfile(input_path, tmp_input_path)
 
-            logger.info(f"Running raster calc {tmp_input_path} {tmp_output_path}")
+            logger.info(
+                f"Running raster calc {tmp_input_path} {tmp_output_path}"
+            )
             netcdf_path = f"netcdf:{tmp_input_path}:lccs_class"
 
             default_meta = {
@@ -152,11 +157,12 @@ class ESALandcover():
                         out_data = out_data.astype(meta["dtype"])
                         dst.write(out_data, window=window)
 
-            logger.info(f"Copying output tmp to final {tmp_output_path} {output_path}")
+            logger.info(
+                f"Copying output tmp to final {tmp_output_path} {output_path}"
+            )
             shutil.copyfile(tmp_output_path, output_path)
 
         return
-
 
     def main(self):
         """
@@ -175,7 +181,6 @@ class ESALandcover():
             download = self.download(year)
             download_results.append(download)
 
-
         os.makedirs(self.output_dir, exist_ok=True)
 
         # Process data
@@ -192,16 +197,14 @@ class ESALandcover():
         logging.info("Finished processing land cover data")
 
 
-
-
 if __name__ == "__main__":
-
-
     config = get_config()
     base_path = Path(config["base_path"])
     lc_config = {
-        "raw_dir": base_path / config["landcover"]["dataset_name"] /"tmp/raw",
-        "process_dir": base_path / config["landcover"]["dataset_name"] / "tmp/processed",
+        "raw_dir": base_path / config["landcover"]["dataset_name"] / "tmp/raw",
+        "process_dir": base_path
+        / config["landcover"]["dataset_name"]
+        / "tmp/processed",
         "output_dir": base_path / config["landcover"]["dataset_name"],
         "years": config["landcover"]["years"],
         "api_key": os.environ[config["landcover"]["api_key_env_var"]],
@@ -210,15 +213,15 @@ if __name__ == "__main__":
         "mapping": config["landcover"]["mapping"],
     }
 
-
     lc_config["output_dir"].mkdir(parents=True, exist_ok=True)
 
     # set logging configuration
-    logging.basicConfig(filename=lc_config["output_dir"] / 'dataset.log',
-                        filemode='a',
-                        level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-
+    logging.basicConfig(
+        filename=lc_config["output_dir"] / "dataset.log",
+        filemode="a",
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
 
     ESA_LC = ESALandcover(**lc_config)
     ESA_LC.main()
