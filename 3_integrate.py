@@ -113,10 +113,37 @@ for raster_id, raster_path in raster_items.items():
 
 
 # merge results into single gdf
-output_gdf = reduce(lambda left,right: pd.merge(left, right, on=id_field, how='inner'), results)
+stats_gdf = reduce(lambda left,right: pd.merge(left, right, on=id_field, how='inner'), results)
 
 # drop the adm1 geometry column
-output_gdf = output_gdf.drop(columns=["geometry_adm1"])
+stats_gdf = stats_gdf.drop(columns=["geometry_adm1"])
+
+
+# ---------------------------------------
+# PERFORM CALCULATIONS
+
+calc_gdf = stats_gdf.copy()
+
+calc_gdf["lc_2015_count"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i]), axis=1)
+calc_gdf["lc_2020_count"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i]), axis=1)
+
+calc_gdf["lc_2015_count_land"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i and "water" not in i]), axis=1)
+calc_gdf["lc_2020_count_land"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i and "water" not in i]), axis=1)
+
+calc_gdf["lc_2015_count_cropland"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i and "cropland" in i]), axis=1)
+calc_gdf["lc_2020_count_cropland"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i and "cropland" in i]), axis=1)
+
+calc_gdf["lc_2015_percent_forest"] = calc_gdf["esa_lc_2015_forest"] / calc_gdf["lc_2015_count_land"] * 100
+calc_gdf["lc_2015_percent_urban"] = calc_gdf["esa_lc_2015_urban"] / calc_gdf["lc_2015_count_land"] * 100
+calc_gdf["lc_2015_percent_cropland"] = calc_gdf["lc_2015_count_cropland"] / calc_gdf["lc_2015_count_land"] * 100
+
+calc_gdf["lc_2020_percent_forest"] = calc_gdf["esa_lc_2020_forest"] / calc_gdf["lc_2020_count_land"] * 100
+calc_gdf["lc_2020_percent_urban"] = calc_gdf["esa_lc_2020_urban"] / calc_gdf["lc_2020_count_land"] * 100
+calc_gdf["lc_2020_percent_cropland"] = calc_gdf["lc_2020_count_cropland"] / calc_gdf["lc_2020_count_land"] * 100
+
+calc_gdf["forest_change"] = calc_gdf["lc_2020_percent_forest"] - calc_gdf["lc_2015_percent_forest"]
+calc_gdf["urban_change"] = calc_gdf["lc_2020_percent_urban"] - calc_gdf["lc_2015_percent_urban"]
+calc_gdf["cropland_change"] = calc_gdf["lc_2020_percent_cropland"] - calc_gdf["lc_2015_percent_cropland"]
 
 
 # ---------------------------------------
@@ -126,7 +153,7 @@ output_gdf = output_gdf.drop(columns=["geometry_adm1"])
 output_csv_path.parent.mkdir(parents=True, exist_ok=True)
 
 # write output to csv
-output_gdf[[i for i in output_gdf.columns if i != "geometry"]].to_csv(output_csv_path, index=False, encoding='utf-8')
+calc_gdf[[i for i in calc_gdf.columns if i != "geometry"]].to_csv(output_csv_path, index=False, encoding='utf-8')
 
 # write output to geojson
-output_gdf.to_file(output_geojson_path, driver="GeoJSON", encoding='utf-8')
+calc_gdf.to_file(output_geojson_path, driver="GeoJSON", encoding='utf-8')

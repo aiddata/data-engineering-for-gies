@@ -52,24 +52,7 @@ class ESALandcover():
 
         self.cdsapi_client = cdsapi.Client()
 
-        # mapping = {
-        #     0: [0],
-        #     10: [10, 11, 12],
-        #     20: [20],
-        #     30: [30, 40],
-        #     50: [50, 60, 61, 62, 70, 71, 72, 80, 81, 82, 90, 100, 160, 170],
-        #     110: [110, 130],
-        #     120: [120, 121, 122],
-        #     140: [140, 150, 151, 152, 153],
-        #     180: [180],
-        #     190: [190],
-        #     200: [200, 201, 202],
-        #     210: [210],
-        #     220: [220],
-        # }
-
         vector_mapping = {int(vi): int(k) for k, v in mapping.items() for vi in v}
-
         self.map_func = np.vectorize(vector_mapping.get)
 
 
@@ -151,10 +134,10 @@ class ESALandcover():
             netcdf_path = f"netcdf:{tmp_input_path}:lccs_class"
 
             default_meta = {
-                # 'count': 1,
-                # 'crs': {'init': 'epsg:4326'},
                 "driver": "COG",
                 "compress": "LZW",
+                # 'count': 1,
+                # 'crs': {'init': 'epsg:4326'},
                 # 'nodata': -9999,
             }
 

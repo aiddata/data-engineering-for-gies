@@ -50,26 +50,20 @@ class geoBoundariesDataset():
         self.api_url = f"https://raw.githubusercontent.com/wmgeolab/gbWeb/{gb_web_hash}/api/current/gbOpen/ALL/ALL/index.json"
 
         self.default_meta = {
-            "active": 0,
-            "public": 0,
             "name": None,
             "path": None,
             "file_extension": ".geojson",
             "title": None,
             "description": None,
-            "details": "",
             "tags": ["geoboundaries", "administrative", "boundary"],
             "citation": "Runfola, D. et al. (2020) geoBoundaries: A global database of political administrative boundaries. PLoS ONE 15(4): e0231866. https://doi.org/10.1371/journal.pone.0231866",
             "source_name": "geoBoundaries",
             "source_url": "geoboundaries.org",
             "other": {},
-            "ingest_src": "geoquery_automated",
-            "is_global": False,
             "group_name": None,
             "group_title": None,
             "group_class": None,
             "group_level": None,
-            "features": None
         }
 
 
@@ -124,7 +118,6 @@ class geoBoundariesDataset():
         adm_meta[
             "description"
         ] = f"This feature collection represents the {item['boundaryType']} level boundaries for {item['boundaryName']} ({iso3}) from geoBoundaries v6."
-        adm_meta["details"] = ""
         adm_meta["group_name"] = f"gb_v6_{iso3}"
         adm_meta["group_title"] = f"gB v6 - {iso3}"
         adm_meta["group_class"] = (
