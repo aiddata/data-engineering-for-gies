@@ -71,7 +71,7 @@ class geoBoundariesDataset():
         """
         Retrieve and return the base logger to be used for this dataset
         """
-        return logging.getLogger("dataset")
+        return logging.getLogger("boundary")
 
 
     def prepare(self):
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     boundary_config["output_dir"].mkdir(parents=True, exist_ok=True)
 
     # set logging configuration
-    logging.basicConfig(filename=boundary_config["output_dir"] / 'dataset.log',
+    logging.basicConfig(filename=boundary_config["output_dir"] / 'boundary.log',
                         filemode='a',
                         level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s')

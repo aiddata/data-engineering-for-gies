@@ -2,6 +2,7 @@
 """
 from pathlib import Path
 from functools import reduce
+import logging
 
 import pandas as pd
 import geopandas as gpd
@@ -11,6 +12,14 @@ from config import get_config
 
 
 config = get_config()
+
+# set logging configuration
+logging.basicConfig(filename=config["base_path"] / 'output' / 'integration.log',
+                    filemode='a',
+                    level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger("integration")
 
 # ---------------------------------------
 # DEFINE PATHS
@@ -33,6 +42,8 @@ output_geojson_path = base_path / "output" / "ghana_adm2_data.geojson"
 
 # -------------------------------------
 # SPATIAL DATA JOIN
+
+logger.info("Preparing boundary data")
 
 # load adm2 and adm1 data
 adm2_gdf = gpd.GeoDataFrame.from_file(adm2_path)
@@ -67,6 +78,8 @@ assert adm2_gdf.overlap_adm1.min() > 0.5, "Overlap is less than 50% for some pol
 # ---------------------------------------
 # TABULAR DATA JOIN
 
+logger.info("Joining treatment data")
+
 # load treatment data
 treatment_df = pd.read_csv(treatment_path)
 
@@ -77,6 +90,8 @@ adm2_gdf = adm2_gdf.drop(columns=["shapeID"])
 
 # ---------------------------------------
 # ZONAL STATISTICS
+
+logger.info("Calculating zonal statistics")
 
 # set the id field that we will use to merge the results of the zonal stats
 id_field = "shapeID_adm2"
@@ -122,6 +137,8 @@ stats_gdf = stats_gdf.drop(columns=["geometry_adm1"])
 # ---------------------------------------
 # PERFORM CALCULATIONS
 
+logger.info("Performing calculations")
+
 calc_gdf = stats_gdf.copy()
 
 calc_gdf["lc_2015_count"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i]), axis=1)
@@ -148,6 +165,8 @@ calc_gdf["cropland_change"] = calc_gdf["lc_2020_percent_cropland"] - calc_gdf["l
 
 # ---------------------------------------
 # EXPORT RESULTS
+
+logger.info("Exporting results")
 
 # make sure the output directory exists
 output_csv_path.parent.mkdir(parents=True, exist_ok=True)
