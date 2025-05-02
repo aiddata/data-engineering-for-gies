@@ -3,44 +3,53 @@ Script to download and process geoBoundaries data
 
 https://www.geoboundaries.org/api.html
 """
-from pathlib import Path
-from typing import List, Optional
+
 import json
 import logging
+from pathlib import Path
+from typing import Dict, List, Optional
 
-import shapely
-import requests
 import geopandas as gpd
+import requests
+import shapely
 
 from config import get_config
-
 
 config = get_config()
 
 
-def get_api_url(url: str):
+def get_api_url(url: str) -> Dict:
     """
     Get the API URL and return the JSON object of content
+
+    Args:
+        url (str): The URL to fetch the API data from.
+
+    Returns:
+        dict: The JSON object of content.
     """
     response = requests.get(url)
     content = response.json()
     return content
 
 
-class geoBoundariesDataset():
-
+class geoBoundariesDataset:
     name = "geoBoundaries"
 
-    def __init__(self,
-                version: str,
-                gb_data_hash: str,
-                gb_web_hash: str,
-                output_dir: str,
-                overwrite_existing: bool,
-                dl_iso3_list: Optional[List[str]] = None):
-
-
-        self.output_dir = output_dir / f"{version}_{gb_data_hash}_{gb_web_hash}"
+    def __init__(
+        self,
+        version: str,
+        gb_data_hash: str,
+        gb_web_hash: str,
+        output_dir: str,
+        overwrite_existing: bool,
+        dl_iso3_list: Optional[List[str]] = None,
+    ):
+        # Path, imported from Python's pathlib library, makes it
+        # convenient to build filepaths using the / operator
+        self.output_dir = (
+            Path(output_dir) / f"{version}_{gb_data_hash}_{gb_web_hash}"
+        )
 
         self.overwrite_existing = overwrite_existing
 
@@ -66,13 +75,11 @@ class geoBoundariesDataset():
             "group_level": None,
         }
 
-
     def get_logger(self):
         """
         Retrieve and return the base logger to be used for this dataset
         """
         return logging.getLogger("boundary")
-
 
     def prepare(self):
         """
@@ -83,18 +90,19 @@ class geoBoundariesDataset():
         """
         logger = self.get_logger()
 
-        logger.info(f"Preparing list of boundaries to download")
+        logger.info("Preparing list of boundaries to download")
 
         api_data = get_api_url(self.api_url)
 
         if self.dl_iso3_list:
-            ingest_items = [(i,) for i in api_data if i["boundaryISO"] in self.dl_iso3_list]
+            ingest_items = [
+                (i,) for i in api_data if i["boundaryISO"] in self.dl_iso3_list
+            ]
         else:
             ingest_items = [(i,) for i in api_data]
 
-        ingest_items = sorted(ingest_items, key=lambda d: d[0]['boundaryISO'])
+        ingest_items = sorted(ingest_items, key=lambda d: d[0]["boundaryISO"])
         return ingest_items
-
 
     def dl_gb_item(self, item: dict):
         """
@@ -112,12 +120,12 @@ class geoBoundariesDataset():
 
         logger.info(f"Processing geoBoundaries item: {adm_meta['name']}")
 
-        adm_meta[
-            "title"
-        ] = f"geoBoundaries v6 - {item['boundaryName']} {item['boundaryType']}"
-        adm_meta[
-            "description"
-        ] = f"This feature collection represents the {item['boundaryType']} level boundaries for {item['boundaryName']} ({iso3}) from geoBoundaries v6."
+        adm_meta["title"] = (
+            f"geoBoundaries v6 - {item['boundaryName']} {item['boundaryType']}"
+        )
+        adm_meta["description"] = (
+            f"This feature collection represents the {item['boundaryType']} level boundaries for {item['boundaryName']} ({iso3}) from geoBoundaries v6."
+        )
         adm_meta["group_name"] = f"gb_v6_{iso3}"
         adm_meta["group_title"] = f"gB v6 - {iso3}"
         adm_meta["group_class"] = (
@@ -142,7 +150,12 @@ class geoBoundariesDataset():
         geojson_path = gpkg_path.with_suffix(".geojson")
         json_path = gpkg_path.with_suffix(".meta.json")
 
-        if gpkg_path.exists() and geojson_path.exists() and json_path.exists() and not self.overwrite_existing:
+        if (
+            gpkg_path.exists()
+            and geojson_path.exists()
+            and json_path.exists()
+            and not self.overwrite_existing
+        ):
             logger.info(f"Skipping existing file: {gpkg_path}")
             return
 
@@ -161,7 +174,6 @@ class geoBoundariesDataset():
                     logger.error(f"Failed to download {commit_dl_url}")
                     return
 
-
         if "shapeName" not in gdf.columns:
             potential_name_field = f'{item["boundaryType"]}_NAME'
             if potential_name_field in gdf.columns:
@@ -176,12 +188,10 @@ class geoBoundariesDataset():
         spatial_extent = shapely.box(*gdf.total_bounds).wkt
         adm_meta["spatial_extent"] = spatial_extent
 
-
         # export metadata to json
         export_adm_meta = adm_meta.copy()
         with open(json_path, "w") as file:
             json.dump(export_adm_meta, file, indent=4)
-
 
     def main(self):
         """
@@ -202,9 +212,7 @@ class geoBoundariesDataset():
         logger.info("Finished downloading boundary data")
 
 
-
 if __name__ == "__main__":
-
     config = get_config()
     boundary_config = config["boundary"]
 
@@ -213,11 +221,12 @@ if __name__ == "__main__":
     boundary_config["output_dir"].mkdir(parents=True, exist_ok=True)
 
     # set logging configuration
-    logging.basicConfig(filename=boundary_config["output_dir"] / 'boundary.log',
-                        filemode='a',
-                        level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-
+    logging.basicConfig(
+        filename=boundary_config["output_dir"] / "boundary.log",
+        filemode="a",
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
 
     gBD = geoBoundariesDataset(**boundary_config)
     gBD.main()

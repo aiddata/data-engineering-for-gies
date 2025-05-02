@@ -1,23 +1,24 @@
-"""
-"""
-from pathlib import Path
-from functools import reduce
-import logging
+""" """
 
-import pandas as pd
+import logging
+from functools import reduce
+from pathlib import Path
+
 import geopandas as gpd
+import pandas as pd
 import rasterstats as rs
 
 from config import get_config
 
-
 config = get_config()
 
 # set logging configuration
-logging.basicConfig(filename=config["base_path"] / 'output' / 'integration.log',
-                    filemode='a',
-                    level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    filename=config["base_path"] / "output" / "integration.log",
+    filemode="a",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 logger = logging.getLogger("integration")
 
@@ -28,12 +29,27 @@ base_path = Path(config["base_path"])
 
 treatment_path = base_path / config["treatment_path"]
 
-adm2_path = base_path / "geoBoundaries" / f'{config["boundary"]["version"]}_{config["boundary"]["gb_data_hash"]}_{config["boundary"]["gb_web_hash"]}' / "geoBoundaries-GHA-ADM2" / "geoBoundaries-GHA-ADM2.geojson"
+adm2_path = (
+    base_path
+    / "geoBoundaries"
+    / f'{config["boundary"]["version"]}_{config["boundary"]["gb_data_hash"]}_{config["boundary"]["gb_web_hash"]}'
+    / "geoBoundaries-GHA-ADM2"
+    / "geoBoundaries-GHA-ADM2.geojson"
+)
 
-adm1_path = base_path / "geoBoundaries" / f'{config["boundary"]["version"]}_{config["boundary"]["gb_data_hash"]}_{config["boundary"]["gb_web_hash"]}' /"geoBoundaries-GHA-ADM1" / "geoBoundaries-GHA-ADM1.geojson"
+adm1_path = (
+    base_path
+    / "geoBoundaries"
+    / f'{config["boundary"]["version"]}_{config["boundary"]["gb_data_hash"]}_{config["boundary"]["gb_web_hash"]}'
+    / "geoBoundaries-GHA-ADM1"
+    / "geoBoundaries-GHA-ADM1.geojson"
+)
 
 
-raster_items = {f"esa_lc_{year}": base_path / "esa_landcover" / f"esa_lc_{year}.tif" for year in config["landcover"]["years"]}
+raster_items = {
+    f"esa_lc_{year}": base_path / "esa_landcover" / f"esa_lc_{year}.tif"
+    for year in config["landcover"]["years"]
+}
 
 
 output_csv_path = base_path / "output" / "ghana_adm2_data.csv"
@@ -56,23 +72,42 @@ adm1_gdf = adm1_gdf.drop(columns=["shapeISO", "shapeGroup", "shapeType"])
 # spatially join the adm1 to the adm2 data
 # this will produce rows for every intersection between an adm2 and adm1 polygon
 # meaning there will be multiple rows for each adm2 polygon
-adm2_gdf = adm2_gdf.sjoin(adm1_gdf, how="inner", predicate="intersects", lsuffix="adm2", rsuffix="adm1")
+adm2_gdf = adm2_gdf.sjoin(
+    adm1_gdf,
+    how="inner",
+    predicate="intersects",
+    lsuffix="adm2",
+    rsuffix="adm1",
+)
 
 # merge the adm1 geometry into the adm2 data that now has the associated adm1 id
-adm2_gdf = adm2_gdf.merge(adm1_gdf[["shapeID", "geometry"]], how="left", left_on="shapeID_adm1", right_on="shapeID", suffixes=("", "_adm1"))
+adm2_gdf = adm2_gdf.merge(
+    adm1_gdf[["shapeID", "geometry"]],
+    how="left",
+    left_on="shapeID_adm1",
+    right_on="shapeID",
+    suffixes=("", "_adm1"),
+)
 
 # drop unnecessary columns from the joins
 adm2_gdf = adm2_gdf.drop(columns=["index_adm1", "shapeID"])
 
 # calculate the overlap between all adm2 and adm1 intersections found by the spatial join
-adm2_gdf["overlap_adm1"] = adm2_gdf.apply(lambda x: x.geometry.intersection(x.geometry_adm1).area / x.geometry.area, axis=1)
+adm2_gdf["overlap_adm1"] = adm2_gdf.apply(
+    lambda x: x.geometry.intersection(x.geometry_adm1).area / x.geometry.area,
+    axis=1,
+)
 
 # keep only instance of shapeID_adm2 with the largest overlap_adm1
 # this should give us the most accurate adm1 polygon for each adm2 polygon since the boundaries are not perfect
-adm2_gdf = adm2_gdf.loc[adm2_gdf.groupby("shapeID_adm2")["overlap_adm1"].idxmax()]
+adm2_gdf = adm2_gdf.loc[
+    adm2_gdf.groupby("shapeID_adm2")["overlap_adm1"].idxmax()
+]
 
 # confirm that we do not have any overlaps that are very small
-assert adm2_gdf.overlap_adm1.min() > 0.5, "Overlap is less than 50% for some polygons"
+assert (
+    adm2_gdf.overlap_adm1.min() > 0.5
+), "Overlap is less than 50% for some polygons"
 
 
 # ---------------------------------------
@@ -84,7 +119,12 @@ logger.info("Joining treatment data")
 treatment_df = pd.read_csv(treatment_path)
 
 # merge the treatment data into the adm2 data and drop the duplicate shapeID column
-adm2_gdf = adm2_gdf.merge(treatment_df[["shapeID", "treatment"]], how="left", left_on="shapeID_adm2", right_on="shapeID")
+adm2_gdf = adm2_gdf.merge(
+    treatment_df[["shapeID", "treatment"]],
+    how="left",
+    left_on="shapeID_adm2",
+    right_on="shapeID",
+)
 adm2_gdf = adm2_gdf.drop(columns=["shapeID"])
 
 
@@ -118,17 +158,26 @@ for raster_id, raster_path in raster_items.items():
         prefix=f"{raster_id}_",
         categorical=True,
         category_map=category_map,
-        all_touched=True)
+        all_touched=True,
+    )
     tmp_gdf = gpd.GeoDataFrame.from_features(tmp_stats)
     tmp_gdf = tmp_gdf.fillna(0)
     tmp_cols = tmp_gdf.columns
     # drop columns except the id field and the raster stats to avoid duplicates
-    tmp_gdf = tmp_gdf[[i for i in tmp_gdf.columns if i not in results[0].columns or i == id_field]]
+    tmp_gdf = tmp_gdf[
+        [
+            i
+            for i in tmp_gdf.columns
+            if i not in results[0].columns or i == id_field
+        ]
+    ]
     results.append(tmp_gdf)
 
 
 # merge results into single gdf
-stats_gdf = reduce(lambda left,right: pd.merge(left, right, on=id_field, how='inner'), results)
+stats_gdf = reduce(
+    lambda left, right: pd.merge(left, right, on=id_field, how="inner"), results
+)
 
 # drop the adm1 geometry column
 stats_gdf = stats_gdf.drop(columns=["geometry_adm1"])
@@ -141,26 +190,68 @@ logger.info("Performing calculations")
 
 calc_gdf = stats_gdf.copy()
 
-calc_gdf["lc_2015_count"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i]), axis=1)
-calc_gdf["lc_2020_count"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i]), axis=1)
+calc_gdf["lc_2015_count"] = calc_gdf.apply(
+    lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i]), axis=1
+)
+calc_gdf["lc_2020_count"] = calc_gdf.apply(
+    lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i]), axis=1
+)
 
-calc_gdf["lc_2015_count_land"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i and "water" not in i]), axis=1)
-calc_gdf["lc_2020_count_land"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i and "water" not in i]), axis=1)
+calc_gdf["lc_2015_count_land"] = calc_gdf.apply(
+    lambda x: sum(
+        [x[i] for i in x.keys() if "esa_lc_2015_" in i and "water" not in i]
+    ),
+    axis=1,
+)
+calc_gdf["lc_2020_count_land"] = calc_gdf.apply(
+    lambda x: sum(
+        [x[i] for i in x.keys() if "esa_lc_2020_" in i and "water" not in i]
+    ),
+    axis=1,
+)
 
-calc_gdf["lc_2015_count_cropland"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2015_" in i and "cropland" in i]), axis=1)
-calc_gdf["lc_2020_count_cropland"] = calc_gdf.apply(lambda x: sum([x[i] for i in x.keys() if "esa_lc_2020_" in i and "cropland" in i]), axis=1)
+calc_gdf["lc_2015_count_cropland"] = calc_gdf.apply(
+    lambda x: sum(
+        [x[i] for i in x.keys() if "esa_lc_2015_" in i and "cropland" in i]
+    ),
+    axis=1,
+)
+calc_gdf["lc_2020_count_cropland"] = calc_gdf.apply(
+    lambda x: sum(
+        [x[i] for i in x.keys() if "esa_lc_2020_" in i and "cropland" in i]
+    ),
+    axis=1,
+)
 
-calc_gdf["lc_2015_percent_forest"] = calc_gdf["esa_lc_2015_forest"] / calc_gdf["lc_2015_count_land"] * 100
-calc_gdf["lc_2015_percent_urban"] = calc_gdf["esa_lc_2015_urban"] / calc_gdf["lc_2015_count_land"] * 100
-calc_gdf["lc_2015_percent_cropland"] = calc_gdf["lc_2015_count_cropland"] / calc_gdf["lc_2015_count_land"] * 100
+calc_gdf["lc_2015_percent_forest"] = (
+    calc_gdf["esa_lc_2015_forest"] / calc_gdf["lc_2015_count_land"] * 100
+)
+calc_gdf["lc_2015_percent_urban"] = (
+    calc_gdf["esa_lc_2015_urban"] / calc_gdf["lc_2015_count_land"] * 100
+)
+calc_gdf["lc_2015_percent_cropland"] = (
+    calc_gdf["lc_2015_count_cropland"] / calc_gdf["lc_2015_count_land"] * 100
+)
 
-calc_gdf["lc_2020_percent_forest"] = calc_gdf["esa_lc_2020_forest"] / calc_gdf["lc_2020_count_land"] * 100
-calc_gdf["lc_2020_percent_urban"] = calc_gdf["esa_lc_2020_urban"] / calc_gdf["lc_2020_count_land"] * 100
-calc_gdf["lc_2020_percent_cropland"] = calc_gdf["lc_2020_count_cropland"] / calc_gdf["lc_2020_count_land"] * 100
+calc_gdf["lc_2020_percent_forest"] = (
+    calc_gdf["esa_lc_2020_forest"] / calc_gdf["lc_2020_count_land"] * 100
+)
+calc_gdf["lc_2020_percent_urban"] = (
+    calc_gdf["esa_lc_2020_urban"] / calc_gdf["lc_2020_count_land"] * 100
+)
+calc_gdf["lc_2020_percent_cropland"] = (
+    calc_gdf["lc_2020_count_cropland"] / calc_gdf["lc_2020_count_land"] * 100
+)
 
-calc_gdf["forest_change"] = calc_gdf["lc_2020_percent_forest"] - calc_gdf["lc_2015_percent_forest"]
-calc_gdf["urban_change"] = calc_gdf["lc_2020_percent_urban"] - calc_gdf["lc_2015_percent_urban"]
-calc_gdf["cropland_change"] = calc_gdf["lc_2020_percent_cropland"] - calc_gdf["lc_2015_percent_cropland"]
+calc_gdf["forest_change"] = (
+    calc_gdf["lc_2020_percent_forest"] - calc_gdf["lc_2015_percent_forest"]
+)
+calc_gdf["urban_change"] = (
+    calc_gdf["lc_2020_percent_urban"] - calc_gdf["lc_2015_percent_urban"]
+)
+calc_gdf["cropland_change"] = (
+    calc_gdf["lc_2020_percent_cropland"] - calc_gdf["lc_2015_percent_cropland"]
+)
 
 
 # ---------------------------------------
@@ -172,7 +263,9 @@ logger.info("Exporting results")
 output_csv_path.parent.mkdir(parents=True, exist_ok=True)
 
 # write output to csv
-calc_gdf[[i for i in calc_gdf.columns if i != "geometry"]].to_csv(output_csv_path, index=False, encoding='utf-8')
+calc_gdf[[i for i in calc_gdf.columns if i != "geometry"]].to_csv(
+    output_csv_path, index=False, encoding="utf-8"
+)
 
 # write output to geojson
-calc_gdf.to_file(output_geojson_path, driver="GeoJSON", encoding='utf-8')
+calc_gdf.to_file(output_geojson_path, driver="GeoJSON", encoding="utf-8")
