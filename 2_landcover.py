@@ -17,8 +17,6 @@ import rasterio
 from config import get_config
 
 
-config = get_config()
-
 class ESALandcover():
 
     name = "ESA Landcover"
