@@ -1,4 +1,6 @@
-""" """
+"""
+Integrate datasets previously downloaded and processed into a format ready for analysis.
+"""
 
 import logging
 from functools import reduce
