@@ -15,8 +15,6 @@ import shapely
 
 from config import get_config
 
-config = get_config()
-
 
 def get_api_url(url: str) -> Dict:
     """
