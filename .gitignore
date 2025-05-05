@@ -2,4 +2,3 @@ __pycache__/
 .env
 data/geoBoundaries/
 data/esa_landcover/
-examples/
