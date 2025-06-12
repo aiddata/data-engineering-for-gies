@@ -2,6 +2,8 @@
 
 Examples and exercises for the "Practical Data Engineering for GIEs" chapter of the Geospatial Impact Evaluation textbook.
 
+[Link to chapter draft](/chapter_draft.pdf)
+
 ## Setting up the environment
 
 1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
