@@ -14,9 +14,11 @@ from config import get_config
 
 config = get_config()
 
+base_path = Path(config["base_path"])
+
 # set logging configuration
 logging.basicConfig(
-    filename=config["base_path"] / "output" / "integration.log",
+    filename=base_path / "output" / "integration.log",
     filemode="a",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -27,7 +29,6 @@ logger = logging.getLogger("integration")
 # ---------------------------------------
 # DEFINE PATHS
 
-base_path = Path(config["base_path"])
 
 treatment_path = base_path / config["treatment_path"]
 

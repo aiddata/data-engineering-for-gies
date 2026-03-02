@@ -1,7 +1,7 @@
 
 base_path = "/home/userx/git/data-engineering-for-gies/data"
 
-treatment_path = "treatment/ghana_adm2_treatment.csv"
+treatment_path = "data/treatment/ghana_adm2_treatment.csv"
 
 
 [boundary]
